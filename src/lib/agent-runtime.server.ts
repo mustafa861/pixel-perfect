@@ -25,7 +25,7 @@ type Specialist = (typeof SPECIALISTS)[number];
 
 export async function runTutor(data: {
   message: string;
-  topicTitle?: string;
+  topicTitle?: string | undefined;
   history: { role: "user" | "assistant"; content: string }[];
 }) {
   const triage = await generateText({
@@ -82,7 +82,7 @@ export async function runQuizGeneration(data: { topicTitle: string; count: numbe
 
 export async function runCodeReview(data: {
   code: string;
-  topicTitle?: string;
+  topicTitle?: string | undefined;
   stdout: string;
   stderr: string;
 }) {
@@ -110,7 +110,7 @@ const exercisesSchema = z.object({
 
 export async function runExerciseGeneration(data: {
   request: string;
-  topicTitle?: string;
+  topicTitle?: string | undefined;
   count: number;
 }) {
   try {
