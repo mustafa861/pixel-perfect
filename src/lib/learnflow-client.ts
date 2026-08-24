@@ -19,7 +19,9 @@ export async function publishEvent(
   topic: EventTopic,
   payload: Record<string, unknown>,
 ) {
-  await supabase.from("events").insert({ user_id: userId, topic, payload });
+  await supabase
+    .from("events")
+    .insert({ user_id: userId, topic, payload: payload as never });
 }
 
 export async function raiseStruggle(
