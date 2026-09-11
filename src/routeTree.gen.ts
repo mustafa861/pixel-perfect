@@ -15,8 +15,10 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedCodeRouteImport } from './routes/_authenticated/code'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedExercisesRouteImport } from './routes/_authenticated/exercises'
+import { Route as AuthenticatedHackathonRouteImport } from './routes/_authenticated/hackathon'
 import { Route as AuthenticatedProgressRouteImport } from './routes/_authenticated/progress'
 import { Route as AuthenticatedQuizRouteImport } from './routes/_authenticated/quiz'
+import { Route as AuthenticatedTeacherRouteImport } from './routes/_authenticated/teacher'
 import { Route as AuthenticatedTutorRouteImport } from './routes/_authenticated/tutor'
 
 const IndexRoute = IndexRouteImport.update({
@@ -48,6 +50,11 @@ const AuthenticatedExercisesRoute = AuthenticatedExercisesRouteImport.update({
   path: '/exercises',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedHackathonRoute = AuthenticatedHackathonRouteImport.update({
+  id: '/hackathon',
+  path: '/hackathon',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedProgressRoute = AuthenticatedProgressRouteImport.update({
   id: '/progress',
   path: '/progress',
@@ -56,6 +63,11 @@ const AuthenticatedProgressRoute = AuthenticatedProgressRouteImport.update({
 const AuthenticatedQuizRoute = AuthenticatedQuizRouteImport.update({
   id: '/quiz',
   path: '/quiz',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedTeacherRoute = AuthenticatedTeacherRouteImport.update({
+  id: '/teacher',
+  path: '/teacher',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedTutorRoute = AuthenticatedTutorRouteImport.update({
@@ -70,8 +82,10 @@ export interface FileRoutesByFullPath {
   '/code': typeof AuthenticatedCodeRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/exercises': typeof AuthenticatedExercisesRoute
+  '/hackathon': typeof AuthenticatedHackathonRoute
   '/progress': typeof AuthenticatedProgressRoute
   '/quiz': typeof AuthenticatedQuizRoute
+  '/teacher': typeof AuthenticatedTeacherRoute
   '/tutor': typeof AuthenticatedTutorRoute
 }
 export interface FileRoutesByTo {
@@ -80,8 +94,10 @@ export interface FileRoutesByTo {
   '/code': typeof AuthenticatedCodeRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/exercises': typeof AuthenticatedExercisesRoute
+  '/hackathon': typeof AuthenticatedHackathonRoute
   '/progress': typeof AuthenticatedProgressRoute
   '/quiz': typeof AuthenticatedQuizRoute
+  '/teacher': typeof AuthenticatedTeacherRoute
   '/tutor': typeof AuthenticatedTutorRoute
 }
 export interface FileRoutesById {
@@ -92,8 +108,10 @@ export interface FileRoutesById {
   '/_authenticated/code': typeof AuthenticatedCodeRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/exercises': typeof AuthenticatedExercisesRoute
+  '/_authenticated/hackathon': typeof AuthenticatedHackathonRoute
   '/_authenticated/progress': typeof AuthenticatedProgressRoute
   '/_authenticated/quiz': typeof AuthenticatedQuizRoute
+  '/_authenticated/teacher': typeof AuthenticatedTeacherRoute
   '/_authenticated/tutor': typeof AuthenticatedTutorRoute
 }
 export interface FileRouteTypes {
@@ -104,8 +122,10 @@ export interface FileRouteTypes {
     | '/code'
     | '/dashboard'
     | '/exercises'
+    | '/hackathon'
     | '/progress'
     | '/quiz'
+    | '/teacher'
     | '/tutor'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -114,8 +134,10 @@ export interface FileRouteTypes {
     | '/code'
     | '/dashboard'
     | '/exercises'
+    | '/hackathon'
     | '/progress'
     | '/quiz'
+    | '/teacher'
     | '/tutor'
   id:
     | '__root__'
@@ -125,8 +147,10 @@ export interface FileRouteTypes {
     | '/_authenticated/code'
     | '/_authenticated/dashboard'
     | '/_authenticated/exercises'
+    | '/_authenticated/hackathon'
     | '/_authenticated/progress'
     | '/_authenticated/quiz'
+    | '/_authenticated/teacher'
     | '/_authenticated/tutor'
   fileRoutesById: FileRoutesById
 }
@@ -180,6 +204,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedExercisesRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/hackathon': {
+      id: '/_authenticated/hackathon'
+      path: '/hackathon'
+      fullPath: '/hackathon'
+      preLoaderRoute: typeof AuthenticatedHackathonRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/progress': {
       id: '/_authenticated/progress'
       path: '/progress'
@@ -192,6 +223,13 @@ declare module '@tanstack/react-router' {
       path: '/quiz'
       fullPath: '/quiz'
       preLoaderRoute: typeof AuthenticatedQuizRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/teacher': {
+      id: '/_authenticated/teacher'
+      path: '/teacher'
+      fullPath: '/teacher'
+      preLoaderRoute: typeof AuthenticatedTeacherRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/tutor': {
@@ -208,8 +246,10 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedCodeRoute: typeof AuthenticatedCodeRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedExercisesRoute: typeof AuthenticatedExercisesRoute
+  AuthenticatedHackathonRoute: typeof AuthenticatedHackathonRoute
   AuthenticatedProgressRoute: typeof AuthenticatedProgressRoute
   AuthenticatedQuizRoute: typeof AuthenticatedQuizRoute
+  AuthenticatedTeacherRoute: typeof AuthenticatedTeacherRoute
   AuthenticatedTutorRoute: typeof AuthenticatedTutorRoute
 }
 
@@ -217,8 +257,10 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedCodeRoute: AuthenticatedCodeRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedExercisesRoute: AuthenticatedExercisesRoute,
+  AuthenticatedHackathonRoute: AuthenticatedHackathonRoute,
   AuthenticatedProgressRoute: AuthenticatedProgressRoute,
   AuthenticatedQuizRoute: AuthenticatedQuizRoute,
+  AuthenticatedTeacherRoute: AuthenticatedTeacherRoute,
   AuthenticatedTutorRoute: AuthenticatedTutorRoute,
 }
 
