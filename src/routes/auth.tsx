@@ -58,17 +58,16 @@ function AuthPage() {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: { emailRedirectTo: `${window.location.origin}/dashboard` },
+      options: {
+        emailRedirectTo: `${window.location.origin}/dashboard`,
+        data: { display_name: name || email.split("@")[0]!, role },
+      },
     });
     if (error || !data.user) {
       setBusy(false);
       toast.error(error?.message ?? "Sign-up failed");
       return;
     }
-    await supabase
-      .from("profiles")
-      .insert({ id: data.user.id, display_name: name || email.split("@")[0]! });
-    await supabase.from("user_roles").insert({ user_id: data.user.id, role });
     setBusy(false);
     toast.success("Account created");
     navigate({ to: role === "teacher" ? "/teacher" : "/dashboard" });
