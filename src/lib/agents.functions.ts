@@ -18,7 +18,12 @@ export const askTutor = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => askTutorInput.parse(input))
   .handler(async ({ data }) => {
     const { runTutor } = await import("./agent-runtime.server");
-    return runTutor(data);
+    try {
+      return await runTutor(data);
+    } catch (error) {
+      console.error("[askTutor] failed:", error);
+      throw error;
+    }
   });
 
 const quizInput = z.object({
@@ -31,7 +36,12 @@ export const generateQuiz = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => quizInput.parse(input))
   .handler(async ({ data }) => {
     const { runQuizGeneration } = await import("./agent-runtime.server");
-    return runQuizGeneration(data);
+    try {
+      return await runQuizGeneration(data);
+    } catch (error) {
+      console.error("[generateQuiz] failed:", error);
+      throw error;
+    }
   });
 
 const reviewInput = z.object({
@@ -46,7 +56,12 @@ export const reviewCode = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => reviewInput.parse(input))
   .handler(async ({ data }) => {
     const { runCodeReview } = await import("./agent-runtime.server");
-    return runCodeReview(data);
+    try {
+      return await runCodeReview(data);
+    } catch (error) {
+      console.error("[reviewCode] failed:", error);
+      throw error;
+    }
   });
 
 const exerciseGenInput = z.object({
@@ -60,7 +75,12 @@ export const generateExercises = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => exerciseGenInput.parse(input))
   .handler(async ({ data }) => {
     const { runExerciseGeneration } = await import("./agent-runtime.server");
-    return runExerciseGeneration(data);
+    try {
+      return await runExerciseGeneration(data);
+    } catch (error) {
+      console.error("[generateExercises] failed:", error);
+      throw error;
+    }
   });
 
 const gradeInput = z.object({
@@ -75,5 +95,10 @@ export const gradeExercise = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => gradeInput.parse(input))
   .handler(async ({ data }) => {
     const { runExerciseGrading } = await import("./agent-runtime.server");
-    return runExerciseGrading(data);
+    try {
+      return await runExerciseGrading(data);
+    } catch (error) {
+      console.error("[gradeExercise] failed:", error);
+      throw error;
+    }
   });
