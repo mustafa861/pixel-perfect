@@ -1,11 +1,6 @@
 import { generateText, streamText, Output, NoObjectGeneratedError } from "ai";
 import { z } from "zod";
-import {
-  createLovableAiGatewayProvider,
-  getGatewayKey,
-  LEARNFLOW_MODEL,
-  LEARNFLOW_PROVIDER_OPTIONS,
-} from "./ai-gateway.server";
+import { createLovableAiGatewayProvider, getGatewayKey, LEARNFLOW_MODEL } from "./ai-gateway.server";
 import {
   AGENT_PROMPTS,
   TRIAGE_PROMPT,
@@ -30,7 +25,7 @@ export async function runTutor(data: {
     model: model(),
     system: TRIAGE_PROMPT,
     prompt: data.message.slice(0, 1500),
-    providerOptions: { lovable: { reasoning_effort: "none", max_completion_tokens: 12 } },
+    maxOutputTokens: 12,
   });
 
   const picked = triage.text.trim().toLowerCase();
@@ -42,7 +37,7 @@ export async function runTutor(data: {
     model: model(),
     system: AGENT_PROMPTS[agent] + context,
     messages: [...data.history, { role: "user" as const, content: data.message }],
-    providerOptions: LEARNFLOW_PROVIDER_OPTIONS,
+    maxOutputTokens: 700,
   });
 
   const text = await result.text;
@@ -68,7 +63,7 @@ export async function runQuizGeneration(data: { topicTitle: string; count: numbe
         "You write beginner Python multiple-choice quizzes. Exactly 4 options per question, one correct. Keep questions short and practical.",
       prompt: `Write ${data.count} multiple-choice questions about the Python topic "${data.topicTitle}". correct_index is the 0-based index of the right option.`,
       output: Output.object({ schema: quizSchema }),
-      providerOptions: LEARNFLOW_PROVIDER_OPTIONS,
+      maxOutputTokens: 1200,
     });
     const output = await result.output;
     return { questions: output.questions.slice(0, data.count) };
@@ -88,7 +83,7 @@ export async function runCodeReview(data: {
     model: model(),
     system: AGENT_PROMPTS.code_review,
     prompt: `Topic: ${data.topicTitle ?? "general Python"}\n\nCode:\n\`\`\`python\n${data.code}\n\`\`\`\n\nstdout:\n${data.stdout || "(none)"}\n\nstderr:\n${data.stderr || "(none)"}`,
-    providerOptions: LEARNFLOW_PROVIDER_OPTIONS,
+    maxOutputTokens: 500,
   });
   const text = await result.text;
   return { feedback: text, quality: extractQuality(text) };
@@ -117,7 +112,7 @@ export async function runExerciseGeneration(data: {
       system: AGENT_PROMPTS.exercise,
       prompt: `Generate ${data.count} Python coding exercises. Teacher request: "${data.request}". Topic: ${data.topicTitle ?? "any"}. difficulty must be one of easy, medium, hard. starter_code is a short Python stub with a TODO comment. solution_hint is one sentence, never the full solution.`,
       output: Output.object({ schema: exercisesSchema }),
-      providerOptions: LEARNFLOW_PROVIDER_OPTIONS,
+      maxOutputTokens: 1500,
     });
     const output = await result.output;
     return { exercises: output.exercises.slice(0, data.count) };
@@ -146,7 +141,7 @@ export async function runExerciseGrading(data: {
         "You auto-grade beginner Python exercise submissions. score is 0-100. Be encouraging but honest; feedback is at most 3 sentences.",
       prompt: `Exercise: ${data.prompt}\n\nSubmission:\n\`\`\`python\n${data.code}\n\`\`\`\n\nstdout:\n${data.stdout || "(none)"}\n\nstderr:\n${data.stderr || "(none)"}`,
       output: Output.object({ schema: gradeSchema }),
-      providerOptions: LEARNFLOW_PROVIDER_OPTIONS,
+      maxOutputTokens: 400,
     });
     const output = await result.output;
     return {
