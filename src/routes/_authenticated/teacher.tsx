@@ -2,9 +2,13 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { generateExercises } from "@/lib/agents.functions";
+import {
+  getTeacherClassData,
+  createExercisesBulk,
+  resolveStruggleAlert,
+} from "@/lib/learnflow.functions";
 import { BAND_LABEL, BAND_TEXT, masteryBand } from "@/lib/mastery";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -35,34 +39,15 @@ function TeacherPage() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const generate = useServerFn(generateExercises);
+  const fetchClass = useServerFn(getTeacherClassData);
+  const bulkCreate = useServerFn(createExercisesBulk);
+  const resolve = useServerFn(resolveStruggleAlert);
   const [request, setRequest] = useState("");
   const [busy, setBusy] = useState(false);
 
   const { data } = useQuery({
     queryKey: ["teacher-class"],
-    queryFn: async () => {
-      const [profiles, mastery, alerts, exercises] = await Promise.all([
-        supabase.from("profiles").select("id, display_name, streak_days"),
-        supabase.from("mastery_scores").select("user_id, mastery, topic_id"),
-        supabase
-          .from("struggle_alerts")
-          .select("*")
-          .eq("resolved", false)
-          .order("created_at", { ascending: false })
-          .limit(20),
-        supabase
-          .from("exercises")
-          .select("id, title, difficulty, created_at")
-          .order("created_at", { ascending: false })
-          .limit(10),
-      ]);
-      return {
-        profiles: profiles.data ?? [],
-        mastery: mastery.data ?? [],
-        alerts: alerts.data ?? [],
-        exercises: exercises.data ?? [],
-      };
-    },
+    queryFn: () => fetchClass(),
   });
 
   const nameById = new Map((data?.profiles ?? []).map((p) => [p.id, p.display_name]));
@@ -85,17 +70,7 @@ function TeacherPage() {
         toast.error("The exercise agent returned nothing. Try rephrasing.");
         return;
       }
-      const { error } = await supabase.from("exercises").insert(
-        result.exercises.map((exercise) => ({
-          title: exercise.title,
-          prompt: exercise.prompt,
-          difficulty: exercise.difficulty,
-          starter_code: exercise.starter_code,
-          solution_hint: exercise.solution_hint,
-          created_by: user.id,
-        })),
-      );
-      if (error) throw error;
+      await bulkCreate({ data: { exercises: result.exercises } });
       setRequest("");
       toast.success(`${result.exercises.length} exercises published to the class.`);
       void queryClient.invalidateQueries({ queryKey: ["teacher-class"] });
@@ -107,7 +82,7 @@ function TeacherPage() {
   }
 
   async function resolveAlert(id: string) {
-    await supabase.from("struggle_alerts").update({ resolved: true }).eq("id", id);
+    await resolve({ data: { id } });
     void queryClient.invalidateQueries({ queryKey: ["teacher-class"] });
   }
 

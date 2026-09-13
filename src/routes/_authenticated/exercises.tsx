@@ -2,11 +2,10 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { gradeExercise } from "@/lib/agents.functions";
 import { runPython } from "@/lib/python-runner";
-import { publishEvent, recomputeMastery } from "@/lib/learnflow-client";
+import { getExercisesData, publishEvent, submitExerciseAttempt } from "@/lib/learnflow.functions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -32,6 +31,9 @@ function ExercisesPage() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const grade = useServerFn(gradeExercise);
+  const fetchExercises = useServerFn(getExercisesData);
+  const publish = useServerFn(publishEvent);
+  const submitAttempt = useServerFn(submitExerciseAttempt);
   const [openId, setOpenId] = useState<string | null>(null);
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
@@ -42,17 +44,7 @@ function ExercisesPage() {
   const { data } = useQuery({
     queryKey: ["exercises", user?.id],
     enabled: Boolean(user),
-    queryFn: async () => {
-      const [exercises, attempts] = await Promise.all([
-        supabase
-          .from("exercises")
-          .select("*")
-          .or(`assigned_to.is.null,assigned_to.eq.${user!.id}`)
-          .order("created_at", { ascending: false }),
-        supabase.from("exercise_attempts").select("*").eq("user_id", user!.id),
-      ]);
-      return { exercises: exercises.data ?? [], attempts: attempts.data ?? [] };
-    },
+    queryFn: () => fetchExercises(),
   });
 
   const bestByExercise = new Map<string, number>();
@@ -71,19 +63,19 @@ function ExercisesPage() {
         data: { prompt, code, stdout: run.stdout, stderr: run.stderr },
       });
       setOutcome(result);
-      await supabase.from("exercise_attempts").insert({
-        user_id: user.id,
-        exercise_id: exerciseId,
-        code,
-        passed: result.passed,
-        score: result.score,
-        feedback: result.feedback,
+      await submitAttempt({
+        data: {
+          exerciseId,
+          topicId,
+          code,
+          passed: result.passed,
+          score: result.score,
+          feedback: result.feedback,
+        },
       });
-      void publishEvent(user.id, "exercise.completed", {
-        exercise_id: exerciseId,
-        score: result.score,
+      void publish({
+        data: { topic: "exercise.completed", payload: { exercise_id: exerciseId, score: result.score } },
       });
-      if (topicId) await recomputeMastery(user.id, topicId);
       void queryClient.invalidateQueries({ queryKey: ["exercises", user.id] });
     } catch {
       toast.error("Grading failed. Please try again.");

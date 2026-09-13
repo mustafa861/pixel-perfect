@@ -2,10 +2,9 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
 import { useRef, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { askTutor } from "@/lib/agents.functions";
-import { publishEvent, raiseStruggle } from "@/lib/learnflow-client";
+import { getTopics, publishEvent, raiseStruggle } from "@/lib/learnflow.functions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -43,6 +42,9 @@ type Msg = { role: "user" | "assistant"; content: string; agent?: string };
 function TutorPage() {
   const { user } = useAuth();
   const ask = useServerFn(askTutor);
+  const fetchTopics = useServerFn(getTopics);
+  const publish = useServerFn(publishEvent);
+  const struggle = useServerFn(raiseStruggle);
   const [topicId, setTopicId] = useState<string>("");
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<Msg[]>([]);
@@ -51,7 +53,7 @@ function TutorPage() {
 
   const { data: topics } = useQuery({
     queryKey: ["topics"],
-    queryFn: async () => (await supabase.from("topics").select("*").order("order_index")).data ?? [],
+    queryFn: () => fetchTopics(),
   });
 
   const topicTitle = topics?.find((t) => t.id === topicId)?.title;
@@ -64,9 +66,11 @@ function TutorPage() {
     setMessages((prev) => [...prev, { role: "user", content: message }]);
     setBusy(true);
 
-    void publishEvent(user.id, "learning.question.asked", { message, topic_id: topicId || null });
+    void publish({ data: { topic: "learning.question.asked", payload: { message, topic_id: topicId || null } } });
     if (STRUGGLE_PHRASES.some((p) => message.toLowerCase().includes(p))) {
-      void raiseStruggle(user.id, "phrase", message.slice(0, 300), topicId || null);
+      void struggle({
+        data: { trigger: "phrase", detail: message.slice(0, 300), topicId: topicId || null },
+      });
     }
 
     try {
@@ -77,9 +81,8 @@ function TutorPage() {
         ...prev,
         { role: "assistant", content: result.content, agent: result.agent },
       ]);
-      void publishEvent(user.id, "learning.answer.given", {
-        agent: result.agent,
-        topic_id: topicId || null,
+      void publish({
+        data: { topic: "learning.answer.given", payload: { agent: result.agent, topic_id: topicId || null } },
       });
       endRef.current?.scrollIntoView({ behavior: "smooth" });
     } catch {

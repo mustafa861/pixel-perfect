@@ -2,11 +2,16 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { reviewCode } from "@/lib/agents.functions";
 import { runPython, type RunResult } from "@/lib/python-runner";
-import { publishEvent, raiseStruggle, recomputeMastery } from "@/lib/learnflow-client";
+import {
+  getTopics,
+  publishEvent,
+  raiseStruggle,
+  recordCodeRun,
+  recordCodeReview,
+} from "@/lib/learnflow.functions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -32,6 +37,11 @@ const STARTER = `# Try it out\nfor i in range(5):\n    print("hello", i)\n`;
 function CodePage() {
   const { user } = useAuth();
   const review = useServerFn(reviewCode);
+  const fetchTopics = useServerFn(getTopics);
+  const publish = useServerFn(publishEvent);
+  const struggle = useServerFn(raiseStruggle);
+  const runRecord = useServerFn(recordCodeRun);
+  const reviewRecord = useServerFn(recordCodeReview);
   const [code, setCode] = useState(STARTER);
   const [topicId, setTopicId] = useState("");
   const [result, setResult] = useState<RunResult | null>(null);
@@ -41,7 +51,7 @@ function CodePage() {
 
   const { data: topics } = useQuery({
     queryKey: ["topics"],
-    queryFn: async () => (await supabase.from("topics").select("*").order("order_index")).data ?? [],
+    queryFn: () => fetchTopics(),
   });
   const topicTitle = topics?.find((t) => t.id === topicId)?.title;
 
@@ -49,32 +59,35 @@ function CodePage() {
     if (!user) return;
     setRunning(true);
     setFeedback(null);
-    void publishEvent(user.id, "code.submitted", { topic_id: topicId || null });
+    void publish({ data: { topic: "code.submitted", payload: { topic_id: topicId || null } } });
     const output = await runPython(code);
     setResult(output);
     setRunning(false);
 
-    await supabase.from("code_submissions").insert({
-      user_id: user.id,
-      topic_id: topicId || null,
-      code,
-      stdout: output.stdout,
-      stderr: output.stderr,
-      success: output.success,
-      error_type: output.errorType,
+    await runRecord({
+      data: {
+        topicId: topicId || null,
+        code,
+        stdout: output.stdout,
+        stderr: output.stderr,
+        success: output.success,
+        errorType: output.errorType ?? null,
+      },
     });
-    void publishEvent(user.id, "code.executed", {
-      success: output.success,
-      error_type: output.errorType,
-      topic_id: topicId || null,
+    void publish({
+      data: {
+        topic: "code.executed",
+        payload: { success: output.success, error_type: output.errorType, topic_id: topicId || null },
+      },
     });
     if (!output.success) {
-      void raiseStruggle(
-        user.id,
-        "error",
-        `${output.errorType ?? "Error"}: ${output.stderr.slice(0, 200)}`,
-        topicId || null,
-      );
+      void struggle({
+        data: {
+          trigger: "error",
+          detail: `${output.errorType ?? "Error"}: ${output.stderr.slice(0, 200)}`,
+          topicId: topicId || null,
+        },
+      });
     }
   }
 
@@ -92,23 +105,20 @@ function CodePage() {
       });
       setFeedback(res);
       if (res.quality !== null) {
-        await supabase
-          .from("code_submissions")
-          .insert({
-            user_id: user.id,
-            topic_id: topicId || null,
+        await reviewRecord({
+          data: {
+            topicId: topicId || null,
             code,
             stdout: result?.stdout ?? "",
             stderr: result?.stderr ?? "",
             success: result?.success ?? true,
-            error_type: result?.errorType ?? null,
-            quality_score: res.quality,
-          });
-        if (topicId) await recomputeMastery(user.id, topicId);
+            errorType: result?.errorType ?? null,
+            qualityScore: res.quality,
+          },
+        });
       }
-      void publishEvent(user.id, "code.reviewed", {
-        quality: res.quality,
-        topic_id: topicId || null,
+      void publish({
+        data: { topic: "code.reviewed", payload: { quality: res.quality, topic_id: topicId || null } },
       });
     } catch {
       toast.error("The review agent is unavailable right now.");

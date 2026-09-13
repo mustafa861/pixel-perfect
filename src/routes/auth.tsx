@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { authClient } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -35,40 +35,39 @@ function AuthPage() {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    void supabase.auth.getSession().then(({ data }) => {
-      if (data.session) navigate({ to: "/dashboard", replace: true });
+    void authClient.getSession().then(({ data }) => {
+      if (data?.user) navigate({ to: "/dashboard", replace: true });
     });
   }, [navigate]);
 
   async function signIn(event: React.FormEvent) {
     event.preventDefault();
     setBusy(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { error, data } = await authClient.signIn.email({ email, password });
     setBusy(false);
     if (error) {
-      toast.error(error.message);
+      toast.error(error.message ?? "Sign-in failed");
       return;
     }
-    navigate({ to: "/dashboard" });
+    const signedInRole = (data?.user as { role?: string } | undefined)?.role;
+    navigate({ to: signedInRole === "teacher" ? "/teacher" : "/dashboard" });
   }
 
   async function signUp(event: React.FormEvent) {
     event.preventDefault();
     setBusy(true);
-    const { data, error } = await supabase.auth.signUp({
+    const { error } = await authClient.signUp.email({
       email,
       password,
-      options: {
-        emailRedirectTo: `${window.location.origin}/dashboard`,
-        data: { display_name: name || email.split("@")[0]!, role },
-      },
+      name: name || email.split("@")[0]!,
+      // @ts-expect-error -- role is a Better-Auth additionalField, not in the base type
+      role,
     });
-    if (error || !data.user) {
-      setBusy(false);
-      toast.error(error?.message ?? "Sign-up failed");
+    setBusy(false);
+    if (error) {
+      toast.error(error.message ?? "Sign-up failed");
       return;
     }
-    setBusy(false);
     toast.success("Account created");
     navigate({ to: role === "teacher" ? "/teacher" : "/dashboard" });
   }
@@ -140,7 +139,7 @@ function AuthPage() {
                   id="password2"
                   type="password"
                   required
-                  minLength={6}
+                  minLength={8}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                 />

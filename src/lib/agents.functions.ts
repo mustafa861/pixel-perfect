@@ -1,5 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireAuth } from "@/lib/require-auth.server";
 import { z } from "zod";
 
 const messageSchema = z.object({
@@ -14,7 +14,7 @@ const askTutorInput = z.object({
 });
 
 export const askTutor = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAuth])
   .inputValidator((input: unknown) => askTutorInput.parse(input))
   .handler(async ({ data }) => {
     const { runTutor } = await import("./agent-runtime.server");
@@ -27,7 +27,7 @@ const quizInput = z.object({
 });
 
 export const generateQuiz = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAuth])
   .inputValidator((input: unknown) => quizInput.parse(input))
   .handler(async ({ data }) => {
     const { runQuizGeneration } = await import("./agent-runtime.server");
@@ -42,7 +42,7 @@ const reviewInput = z.object({
 });
 
 export const reviewCode = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAuth])
   .inputValidator((input: unknown) => reviewInput.parse(input))
   .handler(async ({ data }) => {
     const { runCodeReview } = await import("./agent-runtime.server");
@@ -56,7 +56,7 @@ const exerciseGenInput = z.object({
 });
 
 export const generateExercises = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAuth])
   .inputValidator((input: unknown) => exerciseGenInput.parse(input))
   .handler(async ({ data }) => {
     const { runExerciseGeneration } = await import("./agent-runtime.server");
@@ -71,7 +71,7 @@ const gradeInput = z.object({
 });
 
 export const gradeExercise = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAuth])
   .inputValidator((input: unknown) => gradeInput.parse(input))
   .handler(async ({ data }) => {
     const { runExerciseGrading } = await import("./agent-runtime.server");

@@ -1,7 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { useServerFn } from "@tanstack/react-start";
 import { useAuth } from "@/hooks/useAuth";
+import { getProgressData } from "@/lib/learnflow.functions";
 import { BAND_BG, BAND_LABEL, BAND_TEXT, MASTERY_WEIGHTS, masteryBand } from "@/lib/mastery";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -37,27 +38,12 @@ function Bar({ label, value }: { label: string; value: number }) {
 
 function ProgressPage() {
   const { user } = useAuth();
+  const fetchProgress = useServerFn(getProgressData);
 
   const { data } = useQuery({
     queryKey: ["progress", user?.id],
     enabled: Boolean(user),
-    queryFn: async () => {
-      const [topics, mastery, quizzes] = await Promise.all([
-        supabase.from("topics").select("*").order("order_index"),
-        supabase.from("mastery_scores").select("*").eq("user_id", user!.id),
-        supabase
-          .from("quiz_attempts")
-          .select("*")
-          .eq("user_id", user!.id)
-          .order("created_at", { ascending: false })
-          .limit(10),
-      ]);
-      return {
-        topics: topics.data ?? [],
-        mastery: mastery.data ?? [],
-        quizzes: quizzes.data ?? [],
-      };
-    },
+    queryFn: () => fetchProgress(),
   });
 
   if (!data) return <p className="text-sm text-muted-foreground">Loading your progress…</p>;

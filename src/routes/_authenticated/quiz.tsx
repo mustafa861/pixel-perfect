@@ -2,10 +2,9 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { generateQuiz } from "@/lib/agents.functions";
-import { publishEvent, raiseStruggle, recomputeMastery } from "@/lib/learnflow-client";
+import { getTopics, publishEvent, submitQuizAttempt } from "@/lib/learnflow.functions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -35,6 +34,9 @@ type Question = {
 function QuizPage() {
   const { user } = useAuth();
   const makeQuiz = useServerFn(generateQuiz);
+  const fetchTopics = useServerFn(getTopics);
+  const publish = useServerFn(publishEvent);
+  const submitAttempt = useServerFn(submitQuizAttempt);
   const [topicId, setTopicId] = useState("");
   const [questions, setQuestions] = useState<Question[]>([]);
   const [answers, setAnswers] = useState<Record<number, number>>({});
@@ -43,7 +45,7 @@ function QuizPage() {
 
   const { data: topics } = useQuery({
     queryKey: ["topics"],
-    queryFn: async () => (await supabase.from("topics").select("*").order("order_index")).data ?? [],
+    queryFn: () => fetchTopics(),
   });
   const topicTitle = topics?.find((t) => t.id === topicId)?.title;
 
@@ -58,7 +60,7 @@ function QuizPage() {
     try {
       const result = await makeQuiz({ data: { topicTitle, count: 5 } });
       setQuestions(result.questions as Question[]);
-      if (user) void publishEvent(user.id, "learning.session.started", { topic_id: topicId });
+      if (user) void publish({ data: { topic: "learning.session.started", payload: { topic_id: topicId } } });
     } catch {
       toast.error("Could not build a quiz right now.");
     } finally {
@@ -75,20 +77,17 @@ function QuizPage() {
     if (!user || questions.length === 0) return;
     setSubmitted(true);
     const score = Math.round((correctCount / questions.length) * 100);
-    await supabase.from("quiz_attempts").insert({
-      user_id: user.id,
-      topic_id: topicId || null,
-      questions: questions as never,
-      answers: answers as never,
-      correct_count: correctCount,
-      total_count: questions.length,
-      score,
+    await submitAttempt({
+      data: {
+        topicId: topicId || null,
+        questions: questions as unknown as Record<string, unknown>[],
+        answers,
+        correctCount,
+        totalCount: questions.length,
+        score,
+        ...(topicTitle ? { topicTitle } : {}),
+      },
     });
-    void publishEvent(user.id, "learning.quiz.completed", { score, topic_id: topicId || null });
-    if (score < 50) {
-      void raiseStruggle(user.id, "quiz", `Scored ${score}% on ${topicTitle}`, topicId || null);
-    }
-    if (topicId) await recomputeMastery(user.id, topicId);
   }
 
   return (

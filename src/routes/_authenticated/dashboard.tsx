@@ -1,9 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { useServerFn } from "@tanstack/react-start";
 import { useAuth } from "@/hooks/useAuth";
-import { touchStreak } from "@/lib/learnflow-client";
+import { getDashboardData, touchStreak } from "@/lib/learnflow.functions";
 import { BAND_LABEL, BAND_STROKE, BAND_TEXT, masteryBand } from "@/lib/mastery";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -54,35 +54,17 @@ export function MasteryRing({ value, size = 56 }: { value: number; size?: number
 
 function Dashboard() {
   const { user } = useAuth();
+  const fetchDashboard = useServerFn(getDashboardData);
+  const touch = useServerFn(touchStreak);
 
   useEffect(() => {
-    if (user) void touchStreak(user.id);
-  }, [user]);
+    if (user) void touch();
+  }, [user, touch]);
 
   const { data } = useQuery({
     queryKey: ["dashboard", user?.id],
     enabled: Boolean(user),
-    queryFn: async () => {
-      const [modules, topics, mastery, profile, events] = await Promise.all([
-        supabase.from("modules").select("*").order("order_index"),
-        supabase.from("topics").select("*").order("order_index"),
-        supabase.from("mastery_scores").select("*").eq("user_id", user!.id),
-        supabase.from("profiles").select("*").eq("id", user!.id).maybeSingle(),
-        supabase
-          .from("events")
-          .select("*")
-          .eq("user_id", user!.id)
-          .order("created_at", { ascending: false })
-          .limit(8),
-      ]);
-      return {
-        modules: modules.data ?? [],
-        topics: topics.data ?? [],
-        mastery: mastery.data ?? [],
-        profile: profile.data,
-        events: events.data ?? [],
-      };
-    },
+    queryFn: () => fetchDashboard(),
   });
 
   if (!data) return <p className="text-sm text-muted-foreground">Loading your dashboard…</p>;
