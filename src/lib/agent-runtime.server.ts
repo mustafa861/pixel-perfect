@@ -1,7 +1,7 @@
 import { generateText, streamText, Output, NoObjectGeneratedError } from "ai";
 import { z } from "zod";
 import {
-  createLovableAiGatewayProvider,
+  createOpenRouterProvider,
   getGatewayKey,
   LEARNFLOW_MODEL,
   LEARNFLOW_PROVIDER_OPTIONS,
@@ -14,7 +14,7 @@ import {
 } from "./agents.server";
 
 function model(structured = false) {
-  const gateway = createLovableAiGatewayProvider(getGatewayKey(), undefined, {
+  const gateway = createOpenRouterProvider(getGatewayKey(), {
     structuredOutputs: structured,
   });
   return gateway(LEARNFLOW_MODEL);

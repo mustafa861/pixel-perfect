@@ -1,80 +1,28 @@
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 
-export const LOVABLE_AIG_RUN_ID_HEADER = "X-Lovable-AIG-Run-ID";
-
-export function createLovableAiGatewayRunIdFetch(initialRunId?: string) {
-  let runId = initialRunId?.trim() || undefined;
-  let resolveRunId: (value: string | undefined) => void = () => {};
-  let runIdResolved = false;
-  const runIdReady = new Promise<string | undefined>((resolve) => {
-    resolveRunId = resolve;
-  });
-
-  const publishRunId = (value?: string) => {
-    const nextRunId = value?.trim() || undefined;
-    if (!runId && nextRunId) {
-      runId = nextRunId;
-    }
-    if (!runIdResolved) {
-      runIdResolved = true;
-      resolveRunId(runId);
-    }
-  };
-  if (runId) publishRunId(runId);
-
-  return {
-    fetch: async (input: RequestInfo | URL, init?: RequestInit) => {
-      const headers = new Headers(init?.headers);
-      if (runId && !headers.has(LOVABLE_AIG_RUN_ID_HEADER)) {
-        headers.set(LOVABLE_AIG_RUN_ID_HEADER, runId);
-      }
-      try {
-        const response = await fetch(input, { ...init, headers });
-        publishRunId(response.headers.get(LOVABLE_AIG_RUN_ID_HEADER) ?? undefined);
-        return response;
-      } catch (error) {
-        publishRunId(undefined);
-        throw error;
-      }
-    },
-    getRunId: () => runId,
-    waitForRunId: () => (runId ? Promise.resolve(runId) : runIdReady),
-  };
-}
-
-export function createLovableAiGatewayProvider(
-  lovableApiKey: string,
-  initialRunId?: string,
+export function createOpenRouterProvider(
+  openRouterApiKey: string,
   options?: { structuredOutputs?: boolean },
 ) {
-  const runIdFetch = createLovableAiGatewayRunIdFetch(initialRunId);
-
-  const provider = createOpenAICompatible({
-    name: "lovable",
-    baseURL: "https://ai.gateway.lovable.dev/v1",
+  return createOpenAICompatible({
+    name: "openrouter",
+    baseURL: "https://openrouter.ai/api/v1",
     supportsStructuredOutputs: options?.structuredOutputs ?? false,
     headers: {
-      "Lovable-API-Key": lovableApiKey,
-      "X-Lovable-AIG-SDK": "vercel-ai-sdk",
+      Authorization: `Bearer ${openRouterApiKey}`,
     },
-    fetch: runIdFetch.fetch as typeof fetch,
-  });
-
-  return Object.assign(provider, {
-    getRunId: runIdFetch.getRunId,
-    waitForRunId: runIdFetch.waitForRunId,
   });
 }
 
-export const LEARNFLOW_MODEL = "openai/gpt-5.6-sol";
+export const LEARNFLOW_MODEL = "openai/gpt-4o-mini";
 
-/** Shared provider options for GPT-5.6 chat calls (reasoning must be off). */
+/** Shared provider options for chat calls. */
 export const LEARNFLOW_PROVIDER_OPTIONS = {
-  lovable: { reasoning_effort: "none", max_completion_tokens: 1600 },
+  openrouter: { max_completion_tokens: 1600 },
 } as const;
 
 export function getGatewayKey() {
-  const key = process.env["LOVABLE_API_KEY"];
+  const key = process.env["OPENROUTER_API_KEY"];
   if (!key) throw new Error("AI is not configured for this app yet.");
   return key;
 }
